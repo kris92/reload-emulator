@@ -81,6 +81,7 @@ extern "C" {
 #define APPLE2E_SCREEN_HEIGHT    192  // (192)
 #define APPLE2E_FRAMEBUFFER_SIZE ((APPLE2E_SCREEN_WIDTH / 2) * APPLE2E_SCREEN_HEIGHT)
 
+#define APPLE2E_REAL_FLOPPY      0
 // Config parameters for apple2e_init()
 typedef struct {
     bool fdc_enabled;         // Set to true to enable floppy disk controller emulation
@@ -697,34 +698,48 @@ static void _apple2e_mem_c000_c0ff_rw(apple2e_t *sys, uint16_t addr, bool rw) {
         default:
             if ((addr >= 0xC000) && (addr <= 0xC00F)) {
                 // Keyboard latch
+                wdc65C02cpu_set_dataSlots(false);
                 if (rw) {
                     wdc65C02cpu_set_data(sys->last_key_code);
                 } else {
                     _apple2e_mem_c000_c00f_w(sys, addr);
                 }
             } else if ((addr > 0xC010) && (addr <= 0xC01F)) {  // 0xC010 processed above
+                wdc65C02cpu_set_dataSlots(false);
                 if (rw) {
                     _apple2e_mem_c010_c01f_r(sys, addr);
                 }
             } else if ((addr >= 0xC030) && (addr <= 0xC03F)) {
                 // Speaker
+                wdc65C02cpu_set_dataSlots(true);
                 beeper_toggle(&sys->beeper);
             } else if ((addr >= 0xC080) && (addr <= 0xC08F)) {
                 // 16K Language Card
+                wdc65C02cpu_set_dataSlots(false);
                 _apple2e_lc_control(sys, addr & 0xF, rw);
                 if (rw) {
                     wdc65C02cpu_set_data(0xFF);
                 }
-            } else if ((addr >= 0xC0E0) && (addr <= 0xC0EF)) {
+            } else if ((addr >= 0xC0A0) && (addr <= 0xC0AF)) { // Slot 2
+                wdc65C02cpu_set_dataSlots(true);
+            } else if ((addr >= 0xC0C0) && (addr <= 0xC0CF)) { // Slot 4
+                wdc65C02cpu_set_dataSlots(true);
+            } else if ((addr >= 0xC0E0) && (addr <= 0xC0EF)) { // Slot 6
                 // Disk II FDC
-                if (rw) {
-                    // Memory read
-                    wdc65C02cpu_set_data(sys->fdc.valid ? disk2_fdc_read_byte(&sys->fdc, addr & 0xF) : 0x00);
-                } else {
-                    // Memory write
-                    disk2_fdc_write_byte(&sys->fdc, addr & 0xF, wdc65C02cpu_get_data());
-                }
+                #ifdef APPLE2E_REAL_FLOPPY
+                    wdc65C02cpu_set_dataSlots(true);
+                #else
+                    wdc65C02cpu_set_dataSlots(false);
+                    if (rw) {
+                        // Memory read
+                        wdc65C02cpu_set_data(sys->fdc.valid ? disk2_fdc_read_byte(&sys->fdc, addr & 0xF) : 0x00);
+                    } else {
+                        // Memory write
+                        disk2_fdc_write_byte(&sys->fdc, addr & 0xF, wdc65C02cpu_get_data());
+                    }
+                #endif
             } else if ((addr >= 0xC0F0) && (addr <= 0xC0FF)) {
+                wdc65C02cpu_set_dataSlots(false);
                 // ProDOS HDC
                 if (rw) {
                     // Memory read
@@ -733,6 +748,8 @@ static void _apple2e_mem_c000_c0ff_rw(apple2e_t *sys, uint16_t addr, bool rw) {
                     // Memory write
                     prodos_hdc_write_byte(&sys->hdc, addr & 0xF, wdc65C02cpu_get_data(), &sys->mem);
                 }
+            } else {
+                wdc65C02cpu_set_dataSlots(false);
             }
             break;
     }
@@ -740,33 +757,46 @@ static void _apple2e_mem_c000_c0ff_rw(apple2e_t *sys, uint16_t addr, bool rw) {
 
 static void _apple2e_mem_rw(apple2e_t *sys, uint16_t addr, bool rw) {
     if ((addr >= 0xC000) && (addr <= 0xCFFF)) {
+        wdc65C02cpu_set_cxxx(true);
         if ((addr >= 0xC000) && (addr <= 0xC0FF)) {
             // Apple //e I/O Page
             _apple2e_mem_c000_c0ff_rw(sys, addr, rw);
+        } else if ((addr >= 0xC200) && (addr <= 0xC2FF) && !sys->intcxrom) {
+            wdc65C02cpu_set_dataSlots(true);
         } else if ((addr >= 0xC300) && (addr <= 0xC3FF) && !sys->intcxrom) {
             if (rw) {
                 // Memory read
                 wdc65C02cpu_set_data(sys->slotc3rom ? 0x00 : mem_rd(&sys->mem, addr));
             }
+            wdc65C02cpu_set_dataSlots(false);
+        } else if ((addr >= 0xC400) && (addr <= 0xC4FF) && !sys->intcxrom) {
+            wdc65C02cpu_set_dataSlots(true);
         } else if ((addr >= 0xC600) && (addr <= 0xC6FF) && !sys->intcxrom) {
             // Disk II boot rom
-            if (rw) {
-                // Memory read
-                wdc65C02cpu_set_data(sys->fdc.valid ? sys->fdc_rom[addr & 0xFF] : 0x00);
-            }
+            #ifndef APPLE2E_REAL_FLOPPY
+                if (rw) {
+                    // Memory read
+                    wdc65C02cpu_set_data(sys->fdc.valid ? sys->fdc_rom[addr & 0xFF] : 0x00);
+                }
+            #else
+                wdc65C02cpu_set_dataSlots(true);
+            #endif
         } else if ((addr >= 0xC700) && (addr <= 0xC7FF) && !sys->intcxrom) {
             // Hard disk boot rom
             if (rw) {
                 // Memory read
                 wdc65C02cpu_set_data(sys->hdc.valid ? sys->hdc_rom[addr & 0xFF] : 0x00);
             }
+            wdc65C02cpu_set_dataSlots(false);
         } else if ((addr >= 0xC100) && (addr <= 0xCFFF)) {
             if (rw) {
                 // Memory read
                 wdc65C02cpu_set_data(mem_rd(&sys->mem, addr));
             }
+            wdc65C02cpu_set_dataSlots(false);
         }
     } else {
+        wdc65C02cpu_set_cxxx(false);
         // Regular memory access
         if (rw) {
             // Memory read

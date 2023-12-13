@@ -47,6 +47,10 @@ void wdc65C02cpu_set_data(uint8_t data);
 
 void wdc65C02cpu_set_irq(bool state);
 
+void wdc65C02cpu_set_cxxx(bool state);
+
+void wdc65C02cpu_set_dataSlots(bool state);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
@@ -60,17 +64,21 @@ void wdc65C02cpu_set_irq(bool state);
 #endif
 
 #ifdef PICO_NEO6502
-#define _GPIO_MASK       (0xFF)
-#define _GPIO_SHIFT_BITS (0)
-#define _OE1_PIN         (8)
-#define _OE2_PIN         (9)
-#define _OE3_PIN         (10)
-#define _RW_PIN          (11)
-#define _CLOCK_PIN       (21)
-#define _AUDIO_PIN       (20)
-#define _RESET_PIN       (26)
-#define _IRQ_PIN         (25)
-#define _NMI_PIN         (27)
+#define _GPIO_MASK        (0xFF)
+#define _GPIO_SHIFT_BITS  (0)
+#define _OE1_PIN          (8)
+#define _OE2_PIN          (9)
+#define _OE3_PIN          (10)
+#define _RW_PIN           (11)
+#define _CLOCK_PIN        (21)
+#define _AUDIO_PIN        (20)
+#define _RESET_PIN        (26)
+#define _IRQ_PIN          (25)
+//#define _NMI_PIN         (27)
+#define _CXXX_PIN         (22)
+#define _DATA_SLOT_EN_PIN (23) // MD IN/OUT Table 5.7
+#define _Q3_PIN           (24)
+#define _7M_PIN           (27)
 #else
 #define _GPIO_MASK       (0x3FC)
 #define _GPIO_SHIFT_BITS (2)
@@ -113,9 +121,19 @@ void wdc65C02cpu_init() {
     gpio_put(_IRQ_PIN, 1);
 
 #ifdef PICO_NEO6502
-    gpio_init(_NMI_PIN);  // NMI
-    gpio_set_dir(_NMI_PIN, GPIO_OUT);
-    gpio_put(_NMI_PIN, 1);
+    gpio_init(_CXXX_PIN);  // CXX
+    gpio_set_dir(_CXXX_PIN, GPIO_OUT);
+    gpio_put(_CXXX_PIN, 1);
+
+    gpio_init(_DATA_SLOT_EN_PIN);  // DATA ENABLE FOR SLOTS
+    gpio_set_dir(_DATA_SLOT_EN_PIN, GPIO_OUT);
+    gpio_put(_DATA_SLOT_EN_PIN, 0);
+
+    gpio_init(_Q3_PIN);  // Q3
+    gpio_set_dir(_Q3_PIN, GPIO_OUT);
+
+    gpio_init(_7M_PIN);  // 7M
+    gpio_set_dir(_7M_PIN, GPIO_OUT);
 #endif  // PICO_NEO6502
 
     gpio_put(_RESET_PIN, 0);
@@ -131,9 +149,9 @@ void wdc65C02cpu_reset() {
 
 void wdc65C02cpu_nmi() {
 #ifdef PICO_NEO6502
-    gpio_put(_NMI_PIN, 0);
+    /*gpio_put(_NMI_PIN, 0);
     sleep_us(1000);
-    gpio_put(_NMI_PIN, 1);
+    gpio_put(_NMI_PIN, 1);*/
 #endif  // PICO_NEO6502
 }
 
@@ -145,6 +163,7 @@ void wdc65C02cpu_tick(uint16_t* addr, bool* rw) {
     *rw = gpio_get(_RW_PIN);
 
     gpio_put(_CLOCK_PIN, 1);
+    gpio_put(_Q3_PIN, 0);
 }
 
 uint16_t wdc65C02cpu_get_address() {
@@ -152,6 +171,7 @@ uint16_t wdc65C02cpu_get_address() {
 
     gpio_put(_OE1_PIN, 0);
     __asm volatile("nop\n");
+    gpio_put(_Q3_PIN, 1);
     __asm volatile("nop\n");
     __asm volatile("nop\n");
     __asm volatile("nop\n");
@@ -163,6 +183,7 @@ uint16_t wdc65C02cpu_get_address() {
     __asm volatile("nop\n");
     __asm volatile("nop\n");
 #endif
+    gpio_put(_Q3_PIN, 0);
     uint16_t addr = (gpio_get_all() >> _GPIO_SHIFT_BITS) & 0xFF;
     gpio_put(_OE1_PIN, 1);
 
@@ -173,6 +194,7 @@ uint16_t wdc65C02cpu_get_address() {
     __asm volatile("nop\n");
     __asm volatile("nop\n");
     __asm volatile("nop\n");
+    gpio_put(_Q3_PIN, 1);
 #ifndef PICO_NEO6502
     __asm volatile("nop\n");
     __asm volatile("nop\n");
@@ -227,6 +249,14 @@ void wdc65C02cpu_set_data(uint8_t data) {
 
 void wdc65C02cpu_set_irq(bool state) {
     gpio_put(_IRQ_PIN, state ? 0 : 1);
+}
+
+void wdc65C02cpu_set_cxxx(bool state) {
+    gpio_put(_CXXX_PIN, state ? 0 : 1);
+}
+
+void wdc65C02cpu_set_dataSlots(bool state) {
+    gpio_put(_DATA_SLOT_EN_PIN, state ? 1 : 0);
 }
 
 #endif /* CHIPS_IMPL */
