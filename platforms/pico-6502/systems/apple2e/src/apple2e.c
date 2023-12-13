@@ -80,7 +80,7 @@ apple2e_desc_t apple2e_desc(void) {
     return (apple2e_desc_t){
         .fdc_enabled = false,
         .hdc_enabled = true,
-        .hdc_internal_flash = false,
+        .hdc_internal_flash = true,
         .audio =
             {
                 .callback = {.func = push_audio},
