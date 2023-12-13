@@ -51,6 +51,8 @@ void wdc65C02cpu_set_cxxx(bool state);
 
 void wdc65C02cpu_set_dataSlots(bool state);
 
+void wdc65C02cpu_q3_tick(bool state);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif
@@ -156,14 +158,17 @@ void wdc65C02cpu_nmi() {
 }
 
 void wdc65C02cpu_tick(uint16_t* addr, bool* rw) {
+    wdc65C02cpu_set_dataSlots(0);
+    wdc65C02cpu_set_cxxx(0);
     gpio_put(_CLOCK_PIN, 0);
+    gpio_put(_Q3_PIN, 1);
 
     *addr = wdc65C02cpu_get_address();
 
     *rw = gpio_get(_RW_PIN);
 
     gpio_put(_CLOCK_PIN, 1);
-    gpio_put(_Q3_PIN, 0);
+    gpio_put(_Q3_PIN, 1);
 }
 
 uint16_t wdc65C02cpu_get_address() {
@@ -171,7 +176,6 @@ uint16_t wdc65C02cpu_get_address() {
 
     gpio_put(_OE1_PIN, 0);
     __asm volatile("nop\n");
-    gpio_put(_Q3_PIN, 1);
     __asm volatile("nop\n");
     __asm volatile("nop\n");
     __asm volatile("nop\n");
@@ -183,9 +187,9 @@ uint16_t wdc65C02cpu_get_address() {
     __asm volatile("nop\n");
     __asm volatile("nop\n");
 #endif
+    gpio_put(_OE1_PIN, 1);
     gpio_put(_Q3_PIN, 0);
     uint16_t addr = (gpio_get_all() >> _GPIO_SHIFT_BITS) & 0xFF;
-    gpio_put(_OE1_PIN, 1);
 
     gpio_put(_OE2_PIN, 0);
     __asm volatile("nop\n");
@@ -194,7 +198,6 @@ uint16_t wdc65C02cpu_get_address() {
     __asm volatile("nop\n");
     __asm volatile("nop\n");
     __asm volatile("nop\n");
-    gpio_put(_Q3_PIN, 1);
 #ifndef PICO_NEO6502
     __asm volatile("nop\n");
     __asm volatile("nop\n");
@@ -257,6 +260,10 @@ void wdc65C02cpu_set_cxxx(bool state) {
 
 void wdc65C02cpu_set_dataSlots(bool state) {
     gpio_put(_DATA_SLOT_EN_PIN, state ? 1 : 0);
+}
+
+void wdc65C02cpu_q3_tick(bool state) {
+    gpio_put(_Q3_PIN, state ? 1 : 0);
 }
 
 #endif /* CHIPS_IMPL */

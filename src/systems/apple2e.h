@@ -81,7 +81,7 @@ extern "C" {
 #define APPLE2E_SCREEN_HEIGHT    192  // (192)
 #define APPLE2E_FRAMEBUFFER_SIZE ((APPLE2E_SCREEN_WIDTH / 2) * APPLE2E_SCREEN_HEIGHT)
 
-#define APPLE2E_REAL_FLOPPY      0
+//#define APPLE2E_REAL_FLOPPY      0
 // Config parameters for apple2e_init()
 typedef struct {
     bool fdc_enabled;         // Set to true to enable floppy disk controller emulation
@@ -581,7 +581,7 @@ static void _apple2e_mem_c010_c01f_r(apple2e_t *sys, uint16_t addr) {
 
         default:
             break;
-    }
+    } 
     wdc65C02cpu_set_data(data);
 }
 
@@ -698,14 +698,12 @@ static void _apple2e_mem_c000_c0ff_rw(apple2e_t *sys, uint16_t addr, bool rw) {
         default:
             if ((addr >= 0xC000) && (addr <= 0xC00F)) {
                 // Keyboard latch
-                wdc65C02cpu_set_dataSlots(false);
                 if (rw) {
                     wdc65C02cpu_set_data(sys->last_key_code);
                 } else {
                     _apple2e_mem_c000_c00f_w(sys, addr);
                 }
             } else if ((addr > 0xC010) && (addr <= 0xC01F)) {  // 0xC010 processed above
-                wdc65C02cpu_set_dataSlots(false);
                 if (rw) {
                     _apple2e_mem_c010_c01f_r(sys, addr);
                 }
@@ -715,7 +713,6 @@ static void _apple2e_mem_c000_c0ff_rw(apple2e_t *sys, uint16_t addr, bool rw) {
                 beeper_toggle(&sys->beeper);
             } else if ((addr >= 0xC080) && (addr <= 0xC08F)) {
                 // 16K Language Card
-                wdc65C02cpu_set_dataSlots(false);
                 _apple2e_lc_control(sys, addr & 0xF, rw);
                 if (rw) {
                     wdc65C02cpu_set_data(0xFF);
@@ -729,7 +726,6 @@ static void _apple2e_mem_c000_c0ff_rw(apple2e_t *sys, uint16_t addr, bool rw) {
                 #ifdef APPLE2E_REAL_FLOPPY
                     wdc65C02cpu_set_dataSlots(true);
                 #else
-                    wdc65C02cpu_set_dataSlots(false);
                     if (rw) {
                         // Memory read
                         wdc65C02cpu_set_data(sys->fdc.valid ? disk2_fdc_read_byte(&sys->fdc, addr & 0xF) : 0x00);
@@ -739,7 +735,6 @@ static void _apple2e_mem_c000_c0ff_rw(apple2e_t *sys, uint16_t addr, bool rw) {
                     }
                 #endif
             } else if ((addr >= 0xC0F0) && (addr <= 0xC0FF)) {
-                wdc65C02cpu_set_dataSlots(false);
                 // ProDOS HDC
                 if (rw) {
                     // Memory read
@@ -748,8 +743,6 @@ static void _apple2e_mem_c000_c0ff_rw(apple2e_t *sys, uint16_t addr, bool rw) {
                     // Memory write
                     prodos_hdc_write_byte(&sys->hdc, addr & 0xF, wdc65C02cpu_get_data(), &sys->mem);
                 }
-            } else {
-                wdc65C02cpu_set_dataSlots(false);
             }
             break;
     }
@@ -768,7 +761,6 @@ static void _apple2e_mem_rw(apple2e_t *sys, uint16_t addr, bool rw) {
                 // Memory read
                 wdc65C02cpu_set_data(sys->slotc3rom ? 0x00 : mem_rd(&sys->mem, addr));
             }
-            wdc65C02cpu_set_dataSlots(false);
         } else if ((addr >= 0xC400) && (addr <= 0xC4FF) && !sys->intcxrom) {
             wdc65C02cpu_set_dataSlots(true);
         } else if ((addr >= 0xC600) && (addr <= 0xC6FF) && !sys->intcxrom) {
@@ -787,16 +779,14 @@ static void _apple2e_mem_rw(apple2e_t *sys, uint16_t addr, bool rw) {
                 // Memory read
                 wdc65C02cpu_set_data(sys->hdc.valid ? sys->hdc_rom[addr & 0xFF] : 0x00);
             }
-            wdc65C02cpu_set_dataSlots(false);
         } else if ((addr >= 0xC100) && (addr <= 0xCFFF)) {
             if (rw) {
                 // Memory read
                 wdc65C02cpu_set_data(mem_rd(&sys->mem, addr));
             }
-            wdc65C02cpu_set_dataSlots(false);
         }
     } else {
-        wdc65C02cpu_set_cxxx(false);
+        //wdc65C02cpu_set_cxxx(false);
         // Regular memory access
         if (rw) {
             // Memory read
@@ -851,6 +841,8 @@ void apple2e_tick(apple2e_t *sys) {
             sys->audio.sample_pos = 0;
         }
     }
+
+    wdc65C02cpu_q3_tick(0);
 
     // Tick FDC
     if (sys->fdc.valid && (sys->system_ticks & 127) == 0) {
