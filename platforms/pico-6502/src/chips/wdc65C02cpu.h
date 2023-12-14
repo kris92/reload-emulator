@@ -188,10 +188,10 @@ uint16_t wdc65C02cpu_get_address() {
     __asm volatile("nop\n");
 #endif
     gpio_put(_OE1_PIN, 1);
-    gpio_put(_Q3_PIN, 0);
     uint16_t addr = (gpio_get_all() >> _GPIO_SHIFT_BITS) & 0xFF;
 
     gpio_put(_OE2_PIN, 0);
+    gpio_put(_Q3_PIN, 0);
     __asm volatile("nop\n");
     __asm volatile("nop\n");
     __asm volatile("nop\n");
@@ -264,6 +264,10 @@ void wdc65C02cpu_set_dataSlots(bool state) {
 
 void wdc65C02cpu_q3_tick(bool state) {
     gpio_put(_Q3_PIN, state ? 1 : 0);
+}
+
+void wdc65C02cpu_7M_tick(bool state) {
+    gpio_put(_7M_PIN, state ? 1 : 0);
 }
 
 #endif /* CHIPS_IMPL */
