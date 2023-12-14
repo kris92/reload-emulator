@@ -1077,7 +1077,7 @@ static uint16_t _apple2e_double_7_bits(uint8_t bits) {
     return result;
 }
 
-static uint8_t _apple2e_reverse_7_bits(uint8_t bits) {
+/*static uint8_t _apple2e_reverse_7_bits(uint8_t bits) {
     uint8_t result = 0;
     for (int i = 0; i < 7; i++) {
         result <<= 1;
@@ -1085,7 +1085,7 @@ static uint8_t _apple2e_reverse_7_bits(uint8_t bits) {
         bits >>= 1;
     }
     return result;
-}
+}*/
 
 static void _apple2e_render_line_monochrome(uint8_t *out, uint16_t *in, int start_col, int stop_col) {
     uint32_t w = in[start_col];
