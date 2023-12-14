@@ -31,7 +31,7 @@ struct MIXER_SOURCE {
 };
 
 static struct MIXER_SOURCE mixer_sources[AUDIO_MAX_SOURCES];
-static int16_t mixer_buffer[AUDIO_BUFFER_SIZE];
+//static int16_t mixer_buffer[AUDIO_BUFFER_SIZE];
 
 static void __isr __time_critical_func(dma_handler)() {
     cur_audio_buffer = 1 - cur_audio_buffer;
