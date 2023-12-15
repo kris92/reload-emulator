@@ -717,11 +717,11 @@ static void _apple2e_mem_c000_c0ff_rw(apple2e_t *sys, uint16_t addr, bool rw) {
                 if (rw) {
                     wdc65C02cpu_set_data(0xFF);
                 }
-            } else if ((addr >= 0xC0A0) && (addr <= 0xC0AF)) { // Slot 2
+            } else if ((addr >= 0xC0A0) && (addr <= 0xC0AF)) { // Board : Slot 2
                 wdc65C02cpu_set_dataSlots(true);
-            } else if ((addr >= 0xC0C0) && (addr <= 0xC0CF)) { // Slot 4
+            } else if ((addr >= 0xC0C0) && (addr <= 0xC0CF)) { // Board : Slot 4
                 wdc65C02cpu_set_dataSlots(true);
-            } else if ((addr >= 0xC0E0) && (addr <= 0xC0EF)) { // Slot 6
+            } else if ((addr >= 0xC0E0) && (addr <= 0xC0EF)) { // Board : Slot 6
                 // Disk II FDC
                 #ifdef APPLE2E_REAL_FLOPPY
                     wdc65C02cpu_set_dataSlots(true);
@@ -754,16 +754,16 @@ static void _apple2e_mem_rw(apple2e_t *sys, uint16_t addr, bool rw) {
         if ((addr >= 0xC000) && (addr <= 0xC0FF)) {
             // Apple //e I/O Page
             _apple2e_mem_c000_c0ff_rw(sys, addr, rw);
-        } else if ((addr >= 0xC200) && (addr <= 0xC2FF) && !sys->intcxrom) {
+        } else if ((addr >= 0xC200) && (addr <= 0xC2FF) && !sys->intcxrom) { // Board : Slot 2
             wdc65C02cpu_set_dataSlots(true);
         } else if ((addr >= 0xC300) && (addr <= 0xC3FF) && !sys->intcxrom) {
             if (rw) {
                 // Memory read
                 wdc65C02cpu_set_data(sys->slotc3rom ? 0x00 : mem_rd(&sys->mem, addr));
             }
-        } else if ((addr >= 0xC400) && (addr <= 0xC4FF) && !sys->intcxrom) {
+        } else if ((addr >= 0xC400) && (addr <= 0xC4FF) && !sys->intcxrom) { // Board : Slot 4
             wdc65C02cpu_set_dataSlots(true);
-        } else if ((addr >= 0xC600) && (addr <= 0xC6FF) && !sys->intcxrom) {
+        } else if ((addr >= 0xC600) && (addr <= 0xC6FF) && !sys->intcxrom) { // Board : Slot 6
             // Disk II boot rom
             #ifndef APPLE2E_REAL_FLOPPY
                 if (rw) {
